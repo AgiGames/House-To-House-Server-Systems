@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Manager</title>
+    <title>UserUI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,7 +42,7 @@
 <body>
     <h2>File Manager</h2>
     <label>Cloud Flare URL:</label>
-    <input type="text" id="ngrokUrl" placeholder="Enter Cloud Flare URL">
+    <input type="text" id="cloudFlareUrl" placeholder="Enter Cloud Flare URL">
     <br>
     <label>Folder ID:</label>
     <input type="text" id="folderId" placeholder="Enter Folder ID">
@@ -55,14 +55,14 @@
 
     <script>
         async function listFiles() {
-            const ngrokUrl = document.getElementById('ngrokUrl').value;
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
             const folderId = document.getElementById('folderId').value;
-            if (!ngrokUrl || !folderId) {
+            if (!cloudFlareUrl || !folderId) {
                 alert("Please enter Ngrok URL and Folder ID");
                 return;
             }
 
-            const requestUrl = `${ngrokUrl}/files/list?id=${folderId}`;
+            const requestUrl = `${cloudFlareUrl}/files/list?id=${folderId}`;
             console.log("Fetching files from:", requestUrl);
 
             try {
@@ -94,9 +94,9 @@
         }
 
         async function uploadFile() {
-            const ngrokUrl = document.getElementById('ngrokUrl').value;
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
             const folderId = document.getElementById('folderId').value;
-            if (!ngrokUrl || !folderId) {
+            if (!cloudFlareUrl || !folderId) {
                 alert("Please enter Ngrok URL and Folder ID");
                 return;
             }
@@ -111,7 +111,7 @@
             const formData = new FormData();
             formData.append("file", file);
             
-            const requestUrl = `${ngrokUrl}/files/upload?id=${folderId}`;
+            const requestUrl = `${cloudFlareUrl}/files/upload?id=${folderId}`;
             console.log("Uploading file to:", requestUrl);
 
             try {
@@ -131,14 +131,14 @@
         }
 
         async function deleteFile(fileName) {
-            const ngrokUrl = document.getElementById('ngrokUrl').value;
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
             const folderId = document.getElementById('folderId').value;
-            if (!ngrokUrl || !folderId) {
+            if (!cloudFlareUrl || !folderId) {
                 alert("Please enter Ngrok URL and Folder ID");
                 return;
             }
 
-            const requestUrl = `${ngrokUrl}/files/delete?id=${folderId}&filename=${encodeURIComponent(fileName)}`;
+            const requestUrl = `${cloudFlareUrl}/files/delete?id=${folderId}&filename=${encodeURIComponent(fileName)}`;
             console.log("Deleting file:", requestUrl);
 
             try {

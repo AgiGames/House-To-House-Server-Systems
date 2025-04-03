@@ -65,7 +65,10 @@ public class ServerUI {
 
         Thread tunnelThread = new Thread(() -> {
             try {
-                ProcessBuilder processBuilder = new ProcessBuilder("C:/Users/agile/cloudflared.exe", "tunnel", "--url", "http://localhost:9090");
+                String userHome = System.getProperty("user.home");
+                String cloudflaredPath = userHome + "/cloudflared.exe";
+
+                ProcessBuilder processBuilder = new ProcessBuilder(cloudflaredPath, "tunnel", "--url", "http://localhost:9090");
                 processBuilder.redirectErrorStream(true);
                 Process process = processBuilder.start();
 

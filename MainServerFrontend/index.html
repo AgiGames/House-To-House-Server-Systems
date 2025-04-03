@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UserUI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        input, button {
+            margin: 10px;
+            padding: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid #ddd;
+            margin: 5px;
+            background: #f9f9f9;
+        }
+        li:hover {
+            background: #e9e9e9;
+        }
+        .delete-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h2>File Manager</h2>
+    <label>Cloud Flare URL:</label>
+    <input type="text" id="cloudFlareUrl" placeholder="Enter Cloud Flare URL">
+    <br>
+    <label>Folder ID:</label>
+    <input type="text" id="folderId" placeholder="Enter Folder ID">
+    <br>
+    <button onclick="listFiles()">List Files</button>
+    <br>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload File</button>
+    <ul id="fileList"></ul>
+
+    <script>
+        async function listFiles() {
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
+            const folderId = document.getElementById('folderId').value;
+            if (!cloudFlareUrl || !folderId) {
+                alert("Please enter Ngrok URL and Folder ID");
+                return;
+            }
+
+            const requestUrl = `${cloudFlareUrl}/files/list?id=${folderId}`;
+            console.log("Fetching files from:", requestUrl);
+
+            try {
+                const response = await fetch(requestUrl);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                const files = await response.json();
+                console.log("Files:", files);
+                
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = "";
+                files.forEach(file => {
+                    const li = document.createElement("li");
+                    li.textContent = file.name;
+                    
+                    const deleteButton = document.createElement("button");
+                    deleteButton.textContent = "Delete";
+                    deleteButton.className = "delete-btn";
+                    deleteButton.onclick = () => deleteFile(file.name);
+                    
+                    li.appendChild(deleteButton);
+                    fileList.appendChild(li);
+                });
+            } catch (error) {
+                alert("Error listing files: " + error.message);
+            }
+        }
+
+        async function uploadFile() {
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
+            const folderId = document.getElementById('folderId').value;
+            if (!cloudFlareUrl || !folderId) {
+                alert("Please enter Ngrok URL and Folder ID");
+                return;
+            }
+
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select a file to upload");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            const requestUrl = `${cloudFlareUrl}/files/upload?id=${folderId}`;
+            console.log("Uploading file to:", requestUrl);
+
+            try {
+                const response = await fetch(requestUrl, {
+                    method: "POST",
+                    body: formData
+                });
+                if (response.ok) {
+                    alert("File uploaded successfully");
+                    listFiles();
+                } else {
+                    alert("Upload failed");
+                }
+            } catch (error) {
+                alert("Error uploading file: " + error.message);
+            }
+        }
+
+        async function deleteFile(fileName) {
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
+            const folderId = document.getElementById('folderId').value;
+            if (!cloudFlareUrl || !folderId) {
+                alert("Please enter Ngrok URL and Folder ID");
+                return;
+            }
+
+            const requestUrl = `${cloudFlareUrl}/files/delete?id=${folderId}&filename=${encodeURIComponent(fileName)}`;
+            console.log("Deleting file:", requestUrl);
+
+            try {
+                const response = await fetch(requestUrl, { method: "DELETE" });
+                if (response.ok) {
+                    alert("File deleted successfully");
+                    listFiles();
+                } else {
+                    alert("Delete failed");
+                }
+            } catch (error) {
+                alert("Error deleting file: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

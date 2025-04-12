@@ -37,6 +37,13 @@
             padding: 5px 10px;
             cursor: pointer;
         }
+        .download-btn {
+            background: green;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -58,7 +65,7 @@
             const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
             const folderId = document.getElementById('folderId').value;
             if (!cloudFlareUrl || !folderId) {
-                alert("Please enter Ngrok URL and Folder ID");
+                alert("Please enter Cloud Flare URL and Folder ID");
                 return;
             }
 
@@ -78,13 +85,20 @@
                 fileList.innerHTML = "";
                 files.forEach(file => {
                     const li = document.createElement("li");
-                    li.textContent = file.name;
                     
+                    // Make the file name clickable for downloading
+                    const fileLink = document.createElement("span");
+                    fileLink.textContent = file.name;
+                    fileLink.style.cursor = "pointer";
+                    fileLink.onclick = () => downloadFile(file.name); // Attach download function
+
+                    // Create a delete button
                     const deleteButton = document.createElement("button");
                     deleteButton.textContent = "Delete";
                     deleteButton.className = "delete-btn";
                     deleteButton.onclick = () => deleteFile(file.name);
                     
+                    li.appendChild(fileLink);
                     li.appendChild(deleteButton);
                     fileList.appendChild(li);
                 });
@@ -97,7 +111,7 @@
             const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
             const folderId = document.getElementById('folderId').value;
             if (!cloudFlareUrl || !folderId) {
-                alert("Please enter Ngrok URL and Folder ID");
+                alert("Please enter Cloud Flare URL and Folder ID");
                 return;
             }
 
@@ -134,7 +148,7 @@
             const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
             const folderId = document.getElementById('folderId').value;
             if (!cloudFlareUrl || !folderId) {
-                alert("Please enter Ngrok URL and Folder ID");
+                alert("Please enter Cloud Flare URL and Folder ID");
                 return;
             }
 
@@ -151,6 +165,37 @@
                 }
             } catch (error) {
                 alert("Error deleting file: " + error.message);
+            }
+        }
+
+        async function downloadFile(fileName) {
+            const cloudFlareUrl = document.getElementById('cloudFlareUrl').value;
+            const folderId = document.getElementById('folderId').value;
+            if (!cloudFlareUrl || !folderId) {
+                alert("Please enter Cloud Flare URL and Folder ID");
+                return;
+            }
+
+            const requestUrl = `${cloudFlareUrl}/files/download?id=${folderId}&filename=${encodeURIComponent(fileName)}`;
+            console.log("Downloading file from:", requestUrl);
+
+            try {
+                const response = await fetch(requestUrl);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                alert("Error downloading file: " + error.message);
             }
         }
     </script>

@@ -1,6 +1,8 @@
 package org.sft;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,7 +12,14 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.datatransfer.*;
 import java.io.*;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.regex.*;
+
+import java.net.HttpURLConnection;
 
 @SpringBootApplication
 public class ServerUI {
@@ -20,8 +29,14 @@ public class ServerUI {
     private static JButton copyButton; // button to copy url
     private static String tunnelUrl = ""; // the actual url of the backend server in memory
 
-    private static JComboBox<String> comSelector;
-    private static JTextField folderIDInput;
+    private static JComboBox<String> comSelector; // selection box for choosing the com to receive files from
+    private static JTextField folderIDInput; // input for what folder with folder ID the received files from serial will go to
+
+    private static JTextField destinationFolderID; // folder ID to which downloaded files will go to
+    private static JTextField sourceFolderID; // folder ID from which files can be viewed and downloaded
+    private static JTextField url; // the url from which files will be viewed and downloaded
+    private static JButton listFiles; // a button that lists all files in the given url
+
 
     private static JTextArea logArea; // log outputs as files are sent in serial communication
     private static final int BAUD_RATE = 921600; // baud rate of the serial communication
@@ -163,9 +178,76 @@ public class ServerUI {
         // add the button to the south
         serialPanel.add(startSerialButton, BorderLayout.SOUTH);
 
-        // add both server panel and serial panel to the tabbed pane
+        // tab 3: other server file viewer
+        JPanel fileViewerPanel = new JPanel(new BorderLayout());
+
+        // we make 1 main panel to hold some inputs required
+        JPanel fileViewerSubPanel1 = new JPanel(new GridLayout(1, 4));
+
+        // panel for input of destination folder ID
+        JPanel fileViewerSubPanel2 = new JPanel(new BorderLayout());
+        destinationFolderID = new JTextField("0");
+        fileViewerSubPanel2.setBackground(Color.GRAY);
+        fileViewerSubPanel2.add(destinationFolderID);
+
+        TitledBorder titleBorder3 = BorderFactory.createTitledBorder("Enter destination Folder ID   ");
+        titleBorder3.setTitleColor(Color.WHITE);
+        fileViewerSubPanel2.setBorder(titleBorder3);
+
+        // panel for input of source url
+        JPanel fileViewerSubPanel3 = new JPanel(new BorderLayout());
+        url = new JTextField();
+        fileViewerSubPanel3.setBackground(Color.GRAY);
+        fileViewerSubPanel3.add(url);
+
+        TitledBorder titleBorder4 = BorderFactory.createTitledBorder("Enter source server URL   ");
+        titleBorder4.setTitleColor(Color.WHITE);
+        fileViewerSubPanel3.setBorder(titleBorder4);
+
+        // panel for input of source folder ID
+        JPanel fileViewerSubPanel4 = new JPanel(new BorderLayout());
+        sourceFolderID = new JTextField();
+        fileViewerSubPanel4.setBackground(Color.GRAY);
+        fileViewerSubPanel4.add(sourceFolderID);
+
+        TitledBorder titleBorder5 = BorderFactory.createTitledBorder("Enter source folder ID   ");
+        titleBorder5.setTitleColor(Color.WHITE);
+        fileViewerSubPanel4.setBorder(titleBorder5);
+
+        // button that says list files
+        listFiles = new JButton("List Files");
+
+        // add everything into the panel that will hold input components
+        fileViewerSubPanel1.add(fileViewerSubPanel2);
+        fileViewerSubPanel1.add(fileViewerSubPanel3);
+        fileViewerSubPanel1.add(fileViewerSubPanel4);
+        fileViewerSubPanel1.add(listFiles);
+
+        // we make a separate panel to show and list the files
+        JPanel fileListPanel = new JPanel();
+        fileListPanel.setLayout(new BoxLayout(fileListPanel, BoxLayout.Y_AXIS));
+        fileListPanel.setBackground(Color.gray);
+
+        // we make the list files panel scrollable
+        JScrollPane scrollPane = new JScrollPane(fileListPanel);
+
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        scrollPane.setPreferredSize(new Dimension(400, 300)); // Adjust as needed
+
+        // after the button is clicked, it will list all files so add an action listener and call listFiles() function when clicked
+        listFiles.addActionListener(e -> listFiles(fileListPanel));
+
+        // add main panel for inputs and the scrollable pane
+        fileViewerPanel.add(fileViewerSubPanel1, BorderLayout.NORTH);
+        fileViewerPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // add all three panels: server panel, serial panel, file viewer panel, to the tabbed pane
         tabbedPane.addTab("Server", serverPanel);
         tabbedPane.addTab("Serial Receiver", serialPanel);
+        tabbedPane.addTab("Other Server's File Viewer", fileViewerPanel);
 
         frame.add(tabbedPane); // add the tabbed pane to the main frame
         frame.setVisible(true); // make the frame visible
@@ -421,6 +503,149 @@ public class ServerUI {
             port.closePort(); // close the port after everything is done
         }
 
+    }
+
+    // function to check if a given string is an actual URL
+    public static boolean isValidURL(String url) {
+        try {
+            new URL(url).toURI(); // Additional URI check for edge cases
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void listFiles(JPanel fileListPanel) {
+
+        // check if the entered inputs are valid
+
+        String destinationFolderIDString = destinationFolderID.getText().trim();
+        boolean destinationFolderIDIsValid = !destinationFolderIDString.isEmpty();
+
+        String sourceFolderIDString = sourceFolderID.getText().trim();
+        boolean sourceFolderIDIsValid = !sourceFolderIDString.isEmpty();
+
+        String urlString = url.getText().trim();
+        boolean urlIsValid = isValidURL(urlString);
+
+        if (!destinationFolderIDIsValid || !urlIsValid || !sourceFolderIDIsValid) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Please enter a valid destination folder ID, source URL and source folder ID.",
+                    "Invalid Input",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+
+        // we continue with listing if entered inputs are valid
+        try {
+            // construct full request URL
+            String fullURL = urlString + "/files/list?id=" + sourceFolderIDString;
+
+            URL requestURL = new URL(fullURL);
+            HttpURLConnection conn = (HttpURLConnection) requestURL.openConnection();
+            conn.setRequestMethod("GET"); // we send a get request
+
+            // check response code
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                JOptionPane.showMessageDialog(null, "Server returned: " + conn.getResponseCode(), "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // read response
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder responseBuilder = new StringBuilder();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                responseBuilder.append(line);
+            }
+
+            reader.close();
+            conn.disconnect();
+
+            // parse JSON response
+            JSONArray fileList = new JSONArray(responseBuilder.toString());
+
+            fileListPanel.removeAll();
+
+            for (int i = 0; i < fileList.length(); i++) {
+                JSONObject fileInfo = fileList.getJSONObject(i);
+                String name = fileInfo.getString("name");
+                long size = fileInfo.getLong("size");
+
+                // create a black panel for each file
+                JPanel filePanel = new JPanel();
+                filePanel.setBackground(Color.darkGray);
+                filePanel.setLayout(new BorderLayout(10, 0));
+                filePanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+                // file label with white text
+                JLabel fileLabel = new JLabel("• " + name + " (" + size + " bytes)");
+                fileLabel.setForeground(Color.WHITE);
+
+                // download button
+                JButton downloadButton = new JButton("Download");
+                downloadButton.setBackground(Color.GREEN);
+
+                // add an action listener that sends a download file request when clicked
+                downloadButton.addActionListener(e -> {
+                    try {
+                        // make the download url
+                        String downloadUrl = url.getText().trim() + "/files/download?id=" +
+                                URLEncoder.encode(sourceFolderIDString, StandardCharsets.UTF_8) +
+                                "&filename=" + URLEncoder.encode(name, StandardCharsets.UTF_8);
+
+                        // send GET request and download file
+                        HttpURLConnection connection = (HttpURLConnection) new URL(downloadUrl).openConnection();
+                        connection.setRequestMethod("GET");
+
+                        // check response code
+                        int responseCode = connection.getResponseCode();
+
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            InputStream inputStream = connection.getInputStream();
+                            // make the directory to which file will be written based
+                            File saveDir = new File(ROOT_DIR + "/" + destinationFolderIDString);
+                            if (!saveDir.exists()) {
+                                saveDir.mkdirs();
+                            }
+
+                            // get the file
+                            File outFile = new File(saveDir, name);
+                            // write to file from input stream
+                            Files.copy(inputStream, outFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            inputStream.close();
+
+                            JOptionPane.showMessageDialog(null, "Downloaded: " + name);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Failed to download: " + name, "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+
+                        connection.disconnect(); // disconnect after download done
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "Error downloading file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                });
+
+                // add label and button to panel
+                filePanel.add(fileLabel, BorderLayout.CENTER);
+                filePanel.add(downloadButton, BorderLayout.EAST);
+
+                // add the custom file panel to the main list panel
+                fileListPanel.add(filePanel);
+            }
+
+            fileListPanel.revalidate(); // update UI
+            fileListPanel.repaint();
+
+        } catch (Exception e) { // if error show error
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error fetching file list: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
 }

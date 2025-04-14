@@ -1,3 +1,1 @@
-@echo off
-java -jar ServerUI-1.0.jar
-pause
+java --enable-native-access=ALL-UNNAMED -jar .\ServerUI-1.0.jar

@@ -12,9 +12,10 @@ Access the main server interface here:
 
 ## Interactive Circuit Preview
 
-<iframe src="https://app.cirkitdesigner.com/project/9add52d5-1fe5-44a5-991c-8d9071a3059a?view=interactive_preview" width="100%" height="500" style="border:none;"></iframe>
+[![Preview of the Circuit](preview.png)](https://app.cirkitdesigner.com/project/9add52d5-1fe5-44a5-991c-8d9071a3059a?view=interactive_preview)
 
-If the embed above doesn’t load, [click here to open it in a new tab](https://app.cirkitdesigner.com/project/9add52d5-1fe5-44a5-991c-8d9071a3059a?view=interactive_preview).
+> Click the image above to open the interactive preview.
+
 
 ## ⚙️ Setup Instructions
 

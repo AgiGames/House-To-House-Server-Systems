@@ -141,8 +141,7 @@ public class ServerUI {
         SerialPort[] availablePorts = SerialPort.getCommPorts();
         if (availablePorts.length == 0) {
             // if no ports are available, then log (to the text area) saying no ports are available
-            log("No COM ports detected. Is your device connected?");
-            return;
+            System.out.println("No COM ports detected. Is your device connected?");
         }
 
         // we extract all port names
